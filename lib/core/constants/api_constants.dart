@@ -8,6 +8,7 @@ class ApiConstants {
 
   // Expenses
   static const String expenses = '/expenses';
+  static String expenseById(String id) => '$expenses/$id';
 
   // User Profile
   static const String uploadProfileImage = '/user/profile/image';

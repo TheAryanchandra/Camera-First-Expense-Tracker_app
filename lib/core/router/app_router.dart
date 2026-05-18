@@ -49,6 +49,13 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: '/expense/:id/edit',
+        builder: (context, state) {
+          final expense = state.extra as ExpenseModel;
+          return ExpenseFormScreen(expense: expense);
+        },
+      ),
+      GoRoute(
         path: '/expense/:id',
         builder: (context, state) {
           final expense = state.extra as ExpenseModel;

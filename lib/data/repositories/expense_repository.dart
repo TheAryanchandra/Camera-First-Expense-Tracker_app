@@ -52,7 +52,7 @@ class ExpenseRepository {
         'amount': amount,
         'category': category,
         'date': date,
-        'notes': note,
+        'note': note,
       };
 
       if (receiptImage != null) {
@@ -92,7 +92,7 @@ class ExpenseRepository {
   Future<String> deleteExpense(String id) async {
     try {
       print('=== EXPENSE REPOSITORY: DELETE EXPENSE REQUEST FOR ID: $id ===');
-      final response = await _dioClient.dio.delete('${ApiConstants.expenses}/$id');
+      final response = await _dioClient.dio.delete(ApiConstants.expenseById(id));
       
       print('=== EXPENSE REPOSITORY: DELETE EXPENSE RESPONSE DATA ===');
       print(response.data);
@@ -101,6 +101,59 @@ class ExpenseRepository {
           ? response.data as Map<String, dynamic>
           : <String, dynamic>{};
       return (payload['message'] ?? 'Expense deleted successfully').toString();
+    } catch (e) {
+      throw Exception(DioErrorParser.parse(e));
+    }
+  }
+
+  Future<ExpenseActionResult> updateExpense({
+    required String id,
+    required double amount,
+    required String category,
+    required String date,
+    required String note,
+  }) async {
+    try {
+      final payload = {
+        'amount': amount,
+        'category': category,
+        'date': date,
+        'note': note,
+      };
+
+      print('=== EXPENSE REPOSITORY: UPDATE EXPENSE REQUEST PAYLOAD ===');
+      print(payload);
+
+      Response response;
+      try {
+        response = await _dioClient.dio.patch(
+          ApiConstants.expenseById(id),
+          data: payload,
+        );
+      } on DioException catch (e) {
+        final statusCode = e.response?.statusCode;
+        if (statusCode == 404 || statusCode == 405) {
+          response = await _dioClient.dio.put(
+            ApiConstants.expenseById(id),
+            data: payload,
+          );
+        } else {
+          rethrow;
+        }
+      }
+
+      print('=== EXPENSE REPOSITORY: UPDATE EXPENSE RESPONSE DATA ===');
+      print(response.data);
+
+      final responsePayload = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+      final expenseJson = _extractExpenseJson(responsePayload);
+
+      return ExpenseActionResult(
+        expense: ExpenseModel.fromJson(expenseJson),
+        message: (responsePayload['message'] ?? 'Expense updated successfully').toString(),
+      );
     } catch (e) {
       throw Exception(DioErrorParser.parse(e));
     }

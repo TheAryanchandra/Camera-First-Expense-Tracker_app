@@ -3,14 +3,22 @@ import 'dart:io';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_toast.dart';
 import '../../../logic/expense_bloc/expense_bloc.dart';
+import '../../../data/models/expense_model.dart';
 
 class ExpenseFormScreen extends StatefulWidget {
   final String imagePath;
-  const ExpenseFormScreen({super.key, required this.imagePath});
+  final ExpenseModel? expense;
+
+  const ExpenseFormScreen({
+    super.key,
+    this.imagePath = '',
+    this.expense,
+  });
 
   @override
   State<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
@@ -30,6 +38,20 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     'Health',
     'Other'
   ];
+
+  bool get _isEditMode => widget.expense != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final expense = widget.expense;
+    if (expense != null) {
+      _amountController.text = expense.amount.toStringAsFixed(2);
+      _noteController.text = expense.note;
+      _selectedCategory = expense.category;
+      _selectedDate = expense.date;
+    }
+  }
 
   @override
   void dispose() {
@@ -63,15 +85,23 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       return;
     }
 
-    context.read<ExpenseBloc>().add(
-          AddExpense(
+    final event = _isEditMode
+        ? UpdateExpense(
+            id: widget.expense!.id,
             amount: amount,
             category: _selectedCategory,
             note: _noteController.text.trim(),
             date: _selectedDate.toUtc().toIso8601String(),
-            receiptImage: File(widget.imagePath),
-          ),
-        );
+          )
+        : AddExpense(
+            amount: amount,
+            category: _selectedCategory,
+            note: _noteController.text.trim(),
+            date: _selectedDate.toUtc().toIso8601String(),
+            receiptImage: widget.imagePath.isEmpty ? null : File(widget.imagePath),
+          );
+
+    context.read<ExpenseBloc>().add(event);
   }
 
   @override
@@ -95,7 +125,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.background,
         appBar: AppBar(
-          title: const Text('Add Details'),
+          title: Text(_isEditMode ? 'Edit Expense' : 'Add Details'),
         ),
         body: BlocBuilder<ExpenseBloc, ExpenseState>(
           builder: (context, state) {
@@ -106,16 +136,13 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(widget.imagePath),
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+                  if (_isEditMode || widget.imagePath.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _buildExpenseImage(),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
+                  ],
                   TextField(
                     controller: _amountController,
                     decoration: const InputDecoration(
@@ -171,7 +198,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                   ),
                   const SizedBox(height: 32),
                   CustomButton(
-                    text: 'Save Expense',
+                    text: _isEditMode ? 'Update Expense' : 'Save Expense',
                     isLoading: isSaving,
                     onPressed: isSaving ? null : _saveExpense,
                   ),
@@ -181,6 +208,56 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildExpenseImage() {
+    if (!_isEditMode && widget.imagePath.isNotEmpty) {
+      return Image.file(
+        File(widget.imagePath),
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+
+    final imageUrl = widget.expense?.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: imageUrl,
+          height: 200,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            height: 200,
+            color: Colors.grey.shade100,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(),
+          ),
+          errorWidget: (context, url, error) => _imageFallback(),
+        );
+      }
+
+      return Image.file(
+        File(imageUrl),
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _imageFallback(),
+      );
+    }
+
+    return _imageFallback();
+  }
+
+  Widget _imageFallback() {
+    return Container(
+      height: 200,
+      width: double.infinity,
+      color: Colors.grey.shade100,
+      alignment: Alignment.center,
+      child: const Icon(Icons.receipt_long_rounded, size: 48, color: Colors.grey),
     );
   }
 }

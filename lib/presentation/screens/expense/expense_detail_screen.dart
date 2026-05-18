@@ -63,7 +63,7 @@ class ExpenseDetailScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
-                // TODO: Navigate to edit form
+                context.push('/expense/${expense.id}/edit', extra: expense);
               },
             ),
             IconButton(

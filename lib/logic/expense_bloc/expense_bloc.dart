@@ -57,5 +57,42 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
         emit(ExpenseLoaded(currentExpenses));
       }
     });
+
+    on<UpdateExpense>((event, emit) async {
+      final currentExpenses = state is ExpenseLoaded
+          ? (state as ExpenseLoaded).expenses
+          : <ExpenseModel>[];
+
+      emit(ExpenseLoading());
+      try {
+        final result = await _repository.updateExpense(
+          id: event.id,
+          amount: event.amount,
+          category: event.category,
+          note: event.note,
+          date: event.date,
+        );
+        final updatedExpenses = currentExpenses
+            .map(
+              (expense) => expense.id == event.id
+                  ? expense.copyWith(
+                      amount: result.expense.id.isEmpty ? event.amount : result.expense.amount,
+                      category: result.expense.id.isEmpty ? event.category : result.expense.category,
+                      note: result.expense.id.isEmpty ? event.note : result.expense.note,
+                      date: result.expense.id.isEmpty
+                          ? DateTime.parse(event.date).toLocal()
+                          : result.expense.date,
+                      imageUrl: result.expense.imageUrl ?? expense.imageUrl,
+                      synced: result.expense.id.isEmpty ? expense.synced : result.expense.synced,
+                    )
+                  : expense,
+            )
+            .toList();
+        emit(ExpenseActionSuccess(updatedExpenses, result.message));
+      } catch (e) {
+        emit(ExpenseError(e.toString().replaceAll('Exception: ', '')));
+        emit(ExpenseLoaded(currentExpenses));
+      }
+    });
   }
 }
