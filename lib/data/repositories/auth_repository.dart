@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/network/dio_error_parser.dart';
 import '../../core/constants/api_constants.dart';
@@ -82,5 +84,62 @@ class AuthRepository {
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.containsKey('auth_token');
+  }
+
+  Future<String> uploadProfileImage(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'profileImage': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: basename(imageFile.path),
+        ),
+      });
+
+      print('=== AUTH REPOSITORY: UPLOAD PROFILE IMAGE REQUEST ===');
+
+      final response = await _dioClient.dio.post(
+        ApiConstants.uploadProfileImage,
+        data: formData,
+      );
+
+      print('=== AUTH REPOSITORY: UPLOAD PROFILE IMAGE RESPONSE ===');
+      print(response.data);
+
+      // Extract the image URL from response
+      final data = response.data;
+      String? imageUrl;
+      if (data is Map<String, dynamic>) {
+        final nestedData = data['data'];
+        imageUrl = _readImageUrl(data);
+        if ((imageUrl == null || imageUrl.isEmpty) && nestedData is Map<String, dynamic>) {
+          imageUrl = _readImageUrl(nestedData);
+        }
+      }
+
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_image_url', imageUrl);
+      }
+
+      return imageUrl ?? '';
+    } catch (e) {
+      throw Exception(DioErrorParser.parse(e));
+    }
+  }
+
+  Future<String?> getCachedProfileImageUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('profile_image_url');
+  }
+
+  String? _readImageUrl(Map<String, dynamic> json) {
+    final value = json['profileImage'] ??
+        json['profileImageUrl'] ??
+        json['imageUrl'] ??
+        json['url'];
+    if (value == null) {
+      return null;
+    }
+    return value.toString();
   }
 }

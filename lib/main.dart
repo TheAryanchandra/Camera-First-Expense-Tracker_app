@@ -47,22 +47,28 @@ class ExpenseTrackerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
+    return MultiRepositoryProvider(
       providers: [
-        BlocProvider(
-          create: (context) => AuthBloc(authRepository)..add(AuthCheckRequested()),
-        ),
-        BlocProvider(
-          create: (context) => ExpenseBloc(expenseRepository)..add(LoadExpenses()),
-        ),
+        RepositoryProvider<AuthRepository>.value(value: authRepository),
+        RepositoryProvider<ExpenseRepository>.value(value: expenseRepository),
       ],
-      child: MaterialApp.router(
-        title: 'Expense Tracker',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.light,
-        routerConfig: AppRouter.router,
-        debugShowCheckedModeBanner: false,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => AuthBloc(authRepository)..add(AuthCheckRequested()),
+          ),
+          BlocProvider(
+            create: (context) => ExpenseBloc(expenseRepository)..add(LoadExpenses()),
+          ),
+        ],
+        child: MaterialApp.router(
+          title: 'Expense Tracker',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.light,
+          routerConfig: AppRouter.router,
+          debugShowCheckedModeBanner: false,
+        ),
       ),
     );
   }

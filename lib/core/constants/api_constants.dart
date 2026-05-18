@@ -8,4 +8,8 @@ class ApiConstants {
 
   // Expenses
   static const String expenses = '/expenses';
+
+  // User Profile
+  static const String uploadProfileImage = '/user/profile/image';
+  static const String userProfile = '/user/profile';
 }
