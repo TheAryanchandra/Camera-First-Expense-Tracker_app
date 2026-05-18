@@ -99,18 +99,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 20),
-                    // Elegant Logo icon
+                    // App logo
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.all(18),
+                        width: 108,
+                        height: 108,
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: AppTheme.primary.withOpacity(0.08),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.wallet_outlined,
-                          size: 52,
-                          color: AppTheme.primary,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
