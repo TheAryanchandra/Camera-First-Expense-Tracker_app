@@ -10,9 +10,16 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    final payload = json['data'] is Map<String, dynamic>
+        ? json['data'] as Map<String, dynamic>
+        : json;
+    final userJson = payload['user'] is Map<String, dynamic>
+        ? payload['user'] as Map<String, dynamic>
+        : <String, dynamic>{};
+
     return AuthResponse(
-      user: UserModel.fromJson(json['user'] ?? {}),
-      token: json['token'] ?? '',
+      user: UserModel.fromJson(userJson),
+      token: (payload['token'] ?? json['token'] ?? '').toString(),
     );
   }
 }

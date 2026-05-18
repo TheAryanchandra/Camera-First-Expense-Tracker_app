@@ -1,5 +1,4 @@
 import 'package:hive/hive.dart';
-import 'dart:convert';
 
 part 'expense_model.g.dart';
 
@@ -37,14 +36,22 @@ class ExpenseModel extends HiveObject {
   });
 
   factory ExpenseModel.fromJson(Map<String, dynamic> json) {
+    final amountValue = json['amount'];
+
     return ExpenseModel(
-      id: json['_id'] ?? '',
-      amount: (json['amount'] ?? 0).toDouble(),
-      category: json['category'] ?? '',
-      note: json['notes'] ?? '', // Based on backend 'notes'
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      amount: amountValue is num
+          ? amountValue.toDouble()
+          : double.tryParse(amountValue?.toString() ?? '') ?? 0,
+      category: (json['category'] ?? '').toString(),
+      note: (json['note'] ?? json['notes'] ?? '').toString(),
       date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
-      imageUrl: json['receiptUrl'],
-      synced: true,
+      imageUrl: (json['receiptImage'] ??
+              json['receiptUrl'] ??
+              json['imageUrl'] ??
+              json['receiptImageUrl'])
+          ?.toString(),
+      synced: json['synced'] is bool ? json['synced'] as bool : true,
     );
   }
 
@@ -53,9 +60,9 @@ class ExpenseModel extends HiveObject {
       '_id': id,
       'amount': amount,
       'category': category,
-      'notes': note,
+      'note': note,
       'date': date.toIso8601String(),
-      'receiptUrl': imageUrl,
+      'receiptImage': imageUrl,
       'synced': synced,
     };
   }

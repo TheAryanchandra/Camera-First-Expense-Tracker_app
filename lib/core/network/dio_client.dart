@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 
 class DioClient {
@@ -9,20 +9,30 @@ class DioClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
         headers: {
           'Content-Type': 'application/json',
         },
       ),
     );
 
+    // Logging Interceptor to print requests/responses
+    _dio.interceptors.add(LogInterceptor(
+      request: true,
+      requestHeader: true,
+      requestBody: true,
+      responseHeader: true,
+      responseBody: true,
+      error: true,
+    ));
+
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Get token from Hive
-          var box = Hive.box('authBox');
-          String? token = box.get('token');
+          // Get token from SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          String? token = prefs.getString('auth_token');
           
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -30,7 +40,6 @@ class DioClient {
           return handler.next(options);
         },
         onError: (DioException e, handler) {
-          // Global error handling could go here
           return handler.next(e);
         },
       ),

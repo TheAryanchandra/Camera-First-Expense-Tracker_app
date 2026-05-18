@@ -10,10 +10,13 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final email = (json['email'] ?? '').toString();
+    final username = (json['username'] ?? json['name'] ?? '').toString();
+
     return UserModel(
-      id: json['_id'] ?? '',
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      username: username.isNotEmpty ? username : email.split('@').first,
+      email: email,
     );
   }
 

@@ -4,6 +4,7 @@ import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
 import '../../presentation/screens/home/main_layout.dart';
 import '../../presentation/screens/home/home_screen.dart';
+import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/expense/capture_screen.dart';
 import '../../presentation/screens/expense/expense_form_screen.dart';
 import '../../presentation/screens/expense/expense_detail_screen.dart';
@@ -29,6 +30,10 @@ class AppRouter {
           GoRoute(
             path: '/home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),

@@ -1,6 +1,6 @@
 class ApiConstants {
-  // Use 10.0.2.2 for Android emulator to connect to localhost, or your actual local IP
-  static const String baseUrl = 'http://10.0.2.2:5000/api';
+  // Deployed Live Render Server Base URL
+  static const String baseUrl = 'https://camera-first-expense-tracker.onrender.com/api';
   
   // Auth
   static const String login = '/auth/login';

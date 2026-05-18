@@ -22,7 +22,6 @@ void main() async {
   Hive.registerAdapter(ExpenseModelAdapter()); 
   
   // Open Boxes
-  await Hive.openBox('authBox');
   await Hive.openBox<ExpenseModel>('expensesBox');
 
   // Setup Dependencies
@@ -61,7 +60,7 @@ class ExpenseTrackerApp extends StatelessWidget {
         title: 'Expense Tracker',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.light,
         routerConfig: AppRouter.router,
         debugShowCheckedModeBanner: false,
       ),
