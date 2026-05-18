@@ -7,8 +7,22 @@ import '../../../core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,45 +73,107 @@ class HomeScreen extends StatelessWidget {
             );
           } else if (state is ExpenseLoaded) {
             final expenses = state.expenses;
-            
-            // Calculate totals
-            final today = DateTime.now();
+            final filteredExpenses = _filterExpenses(expenses, _searchQuery);
+            final now = DateTime.now();
             final todayTotal = expenses
-                .where((e) => e.date.year == today.year && e.date.month == today.month && e.date.day == today.day)
-                .fold(0.0, (sum, e) => sum + e.amount);
-                
+                .where((expense) => _isSameDay(expense.date, now))
+                .fold(0.0, (sum, expense) => sum + expense.amount);
             final weekTotal = expenses
-                .where((e) => e.date.isAfter(today.subtract(const Duration(days: 7))))
-                .fold(0.0, (sum, e) => sum + e.amount);
+                .where((expense) => _isWithinCurrentWeek(expense.date, now))
+                .fold(0.0, (sum, expense) => sum + expense.amount);
+            final monthTotal = expenses
+                .where((expense) => expense.date.year == now.year && expense.date.month == now.month)
+                .fold(0.0, (sum, expense) => sum + expense.amount);
 
             return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Custom Summary Cards
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildSummaryCard('Today', todayTotal, true),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildSummaryCard('This Week', weekTotal, false),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
                         Text(
-                          'Recent Transactions',
+                          'Spending Summary',
                           style: GoogleFonts.outfit(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.textPrimary,
                           ),
+                        ),
+                        const SizedBox(height: 14),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildSummaryCard('Today', todayTotal, AppTheme.primary, Colors.white),
+                              const SizedBox(width: 12),
+                              _buildSummaryCard('This Week', weekTotal, Colors.white, AppTheme.textPrimary),
+                              const SizedBox(width: 12),
+                              _buildSummaryCard('This Month', monthTotal, Colors.white, AppTheme.textPrimary),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Search by category or note',
+                            hintStyle: GoogleFonts.inter(color: AppTheme.textSecondary),
+                            prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+                            suffixIcon: _searchQuery.trim().isEmpty
+                                ? null
+                                : IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                    },
+                                    icon: const Icon(Icons.close_rounded, color: AppTheme.textSecondary),
+                                  ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: const BorderSide(color: AppTheme.inputBorder),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: const BorderSide(color: AppTheme.inputBorder),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Recent Transactions',
+                              style: GoogleFonts.outfit(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              '${filteredExpenses.length} result${filteredExpenses.length == 1 ? '' : 's'}',
+                              style: GoogleFonts.inter(
+                                color: AppTheme.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -120,14 +196,30 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   )
+                else if (filteredExpenses.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Center(
+                        child: Text(
+                          'No expenses match "${_searchQuery.trim()}".',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
                 else
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final expense = expenses[index];
+                        final expense = filteredExpenses[index];
                         return _buildExpenseTile(context, expense);
                       },
-                      childCount: expenses.length,
+                      childCount: filteredExpenses.length,
                     ),
                   ),
               ],
@@ -139,17 +231,46 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCard(String title, double amount, bool isPrimary) {
+  List<ExpenseModel> _filterExpenses(List<ExpenseModel> expenses, String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) {
+      return expenses;
+    }
+
+    return expenses.where((expense) {
+      final category = expense.category.toLowerCase();
+      final note = expense.note.toLowerCase();
+      return category.contains(normalizedQuery) || note.contains(normalizedQuery);
+    }).toList();
+  }
+
+  bool _isSameDay(DateTime value, DateTime reference) {
+    return value.year == reference.year &&
+        value.month == reference.month &&
+        value.day == reference.day;
+  }
+
+  bool _isWithinCurrentWeek(DateTime value, DateTime reference) {
+    final startOfWeek = DateTime(reference.year, reference.month, reference.day)
+        .subtract(Duration(days: reference.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 7));
+    return !value.isBefore(startOfWeek) && value.isBefore(endOfWeek);
+  }
+
+  Widget _buildSummaryCard(String title, double amount, Color backgroundColor, Color textColor) {
+    final isPrimary = backgroundColor == AppTheme.primary;
     return Container(
+      width: 170,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isPrimary ? AppTheme.primary : Colors.white,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(24),
+        border: isPrimary ? null : Border.all(color: AppTheme.inputBorder),
         boxShadow: [
           BoxShadow(
-            color: isPrimary ? AppTheme.primary.withOpacity(0.3) : Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: isPrimary ? AppTheme.primary.withOpacity(0.28) : Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -159,7 +280,7 @@ class HomeScreen extends StatelessWidget {
           Text(
             title,
             style: GoogleFonts.inter(
-              color: isPrimary ? Colors.white.withOpacity(0.8) : AppTheme.textSecondary,
+              color: isPrimary ? Colors.white.withOpacity(0.85) : AppTheme.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -168,8 +289,8 @@ class HomeScreen extends StatelessWidget {
           Text(
             '₹${amount.toStringAsFixed(2)}',
             style: GoogleFonts.outfit(
-              color: isPrimary ? Colors.white : AppTheme.textPrimary,
-              fontSize: 28,
+              color: textColor,
+              fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),

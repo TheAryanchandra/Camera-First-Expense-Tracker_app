@@ -37,6 +37,22 @@ class ExpenseDetailScreen extends StatelessWidget {
     );
   }
 
+  void _openImageViewer(BuildContext context) {
+    final imageUrl = expense.imageUrl;
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _ReceiptImageViewer(
+          imageUrl: imageUrl,
+          heroTag: 'receipt-${expense.id}',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<ExpenseBloc, ExpenseState>(
@@ -77,28 +93,63 @@ class ExpenseDetailScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (expense.imageUrl != null && expense.imageUrl!.isNotEmpty)
-                InteractiveViewer(
-                  panEnabled: false,
-                  minScale: 0.5,
-                  maxScale: 3.0,
-                  child: expense.imageUrl!.startsWith('http')
-                      ? CachedNetworkImage(
-                          imageUrl: expense.imageUrl!,
-                          height: 300,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) =>
-                              const Center(child: CircularProgressIndicator()),
-                          errorWidget: (context, url, error) => const Icon(Icons.error),
-                        )
-                      : Image.file(
-                          File(expense.imageUrl!),
-                          height: 300,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.broken_image, size: 100),
+                GestureDetector(
+                  onTap: () => _openImageViewer(context),
+                  child: SizedBox(
+                    height: 320,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Hero(
+                          tag: 'receipt-${expense.id}',
+                          child: expense.imageUrl!.startsWith('http')
+                              ? CachedNetworkImage(
+                                  imageUrl: expense.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.grey.shade100,
+                                    alignment: Alignment.center,
+                                    child: const CircularProgressIndicator(),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Center(child: Icon(Icons.error, size: 48)),
+                                )
+                              : Image.file(
+                                  File(expense.imageUrl!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Center(child: Icon(Icons.broken_image, size: 100)),
+                                ),
                         ),
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.55),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 18),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Tap to zoom',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 )
               else
                 Container(
@@ -152,6 +203,59 @@ class ExpenseDetailScreen extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReceiptImageViewer extends StatelessWidget {
+  final String imageUrl;
+  final String heroTag;
+
+  const _ReceiptImageViewer({
+    required this.imageUrl,
+    required this.heroTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Receipt Preview'),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          panEnabled: true,
+          minScale: 1,
+          maxScale: 5,
+          boundaryMargin: const EdgeInsets.all(120),
+          clipBehavior: Clip.none,
+          child: Hero(
+            tag: heroTag,
+            child: imageUrl.startsWith('http')
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                    errorWidget: (context, url, error) =>
+                        const Icon(Icons.broken_image_rounded, color: Colors.white, size: 80),
+                  )
+                : Image.file(
+                    File(imageUrl),
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.broken_image_rounded,
+                      color: Colors.white,
+                      size: 80,
+                    ),
+                  ),
           ),
         ),
       ),
